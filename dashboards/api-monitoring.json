@@ -1,0 +1,404 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "DocStorageService Business Monitoring",
+    "tags": ["docstorageservice", "business", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Document Operations",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\"}[5m])) * 60",
+            "legendFormat": "Operations/min"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Operations by Type",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\"}[5m])) by (operation) * 60",
+            "legendFormat": "{{operation}}/min"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Success vs Failed Operations",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\", status_type=\"success\"}[5m])) by (operation) * 60",
+            "legendFormat": "{{operation}} Success"
+          },
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\", status_type=\"client_error\"}[5m])) by (operation) * 60",
+            "legendFormat": "{{operation}} Client Error"
+          },
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\", status_type=\"service_error\"}[5m])) by (operation) * 60",
+            "legendFormat": "{{operation}} Service Error"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Service Error Rate with Thresholds",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\", status_type=\"service_error\"}[1m])) * 60",
+            "legendFormat": "Service Errors/min"
+          },
+          {
+            "expr": "vector(2)",
+            "legendFormat": "Sev3 Threshold"
+          },
+          {
+            "expr": "vector(5)",
+            "legendFormat": "Sev2 Threshold"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 2},
+                {"color": "red", "value": 5}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Sev3 Threshold"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}},
+                {"id": "custom.lineStyle", "value": {"dash": [10, 10]}}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Sev2 Threshold"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}},
+                {"id": "custom.lineStyle", "value": {"dash": [10, 10]}}
+              ]
+            }
+          ]
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6}
+      },
+      {
+        "id": 5,
+        "title": "Operation Duration",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(doc_operation_duration_seconds_bucket{service=\"DocStorageService\"}[5m]))",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(doc_operation_duration_seconds_bucket{service=\"DocStorageService\"}[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(doc_operation_duration_seconds_bucket{service=\"DocStorageService\"}[5m]))",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Operation Duration by Type",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(doc_operation_duration_seconds_bucket{service=\"DocStorageService\"}[5m])) by (operation)",
+            "legendFormat": "{{operation}} 95th percentile"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14}
+      },
+      {
+        "id": 7,
+        "title": "Error Breakdown",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\", status_type=\"success\"}[5m]))",
+            "legendFormat": "Success"
+          },
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\", status_type=\"client_error\"}[5m]))",
+            "legendFormat": "Client Errors (4xx)"
+          },
+          {
+            "expr": "sum(rate(doc_operations_total{service=\"DocStorageService\", status_type=\"service_error\"}[5m]))",
+            "legendFormat": "Service Errors (5xx)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14}
+      },
+      {
+        "id": 8,
+        "title": "ECS Service CPU Utilization",
+        "type": "timeseries",
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "cloudwatch"
+        },
+        "targets": [
+          {
+            "namespace": "AWS/ECS",
+            "metricName": "CPUUtilization",
+            "dimensions": {
+              "ServiceName": "data-processor-service",
+              "ClusterName": "ObservabilityCluster"
+            },
+            "statistic": "Average",
+            "period": "300",
+            "region": "us-east-1",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {"mode": "palette-classic"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22}
+      },
+      {
+        "id": 9,
+        "title": "ECS Service Memory Utilization",
+        "type": "timeseries",
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "cloudwatch"
+        },
+        "targets": [
+          {
+            "namespace": "AWS/ECS",
+            "metricName": "MemoryUtilization",
+            "dimensions": {
+              "ServiceName": "data-processor-service",
+              "ClusterName": "ObservabilityCluster"
+            },
+            "statistic": "Average",
+            "period": "300",
+            "region": "us-east-1",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {"mode": "palette-classic"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22}
+      },
+      {
+        "id": 10,
+        "title": "API Gateway Request Count",
+        "type": "timeseries",
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "cloudwatch"
+        },
+        "targets": [
+          {
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Count",
+            "dimensions": {
+              "ApiName": "grafana-observability-api"
+            },
+            "statistic": "Sum",
+            "period": "300",
+            "region": "us-east-1",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30}
+      },
+      {
+        "id": 11,
+        "title": "API Gateway Latency",
+        "type": "timeseries",
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "cloudwatch"
+        },
+        "targets": [
+          {
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Latency",
+            "dimensions": {
+              "ApiName": "grafana-observability-api"
+            },
+            "statistic": "Average",
+            "period": "300",
+            "region": "us-east-1",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "color": {"mode": "palette-classic"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1000},
+                {"color": "red", "value": 3000}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30}
+      },
+      {
+        "id": 12,
+        "title": "API Gateway 4XX/5XX Errors",
+        "type": "timeseries",
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "cloudwatch"
+        },
+        "targets": [
+          {
+            "namespace": "AWS/ApiGateway",
+            "metricName": "4XXError",
+            "dimensions": {
+              "ApiName": "grafana-observability-api"
+            },
+            "statistic": "Sum",
+            "period": "300",
+            "region": "us-east-1",
+            "refId": "A",
+            "alias": "4XX Errors"
+          },
+          {
+            "namespace": "AWS/ApiGateway",
+            "metricName": "5XXError",
+            "dimensions": {
+              "ApiName": "grafana-observability-api"
+            },
+            "statistic": "Sum",
+            "period": "300",
+            "region": "us-east-1",
+            "refId": "B",
+            "alias": "5XX Errors"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "4XX Errors"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "5XX Errors"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
+            }
+          ]
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 38}
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Service Errors",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "enable": true,
+          "expr": "rate(doc_operations_total{service=\"DocStorageService\", status_type=\"service_error\"}[1m]) * 60 >= 2",
+          "iconColor": "red",
+          "titleFormat": "Service Error Alert",
+          "textFormat": "{{ $value }} errors/min"
+        }
+      ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

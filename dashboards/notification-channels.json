@@ -1,0 +1,12 @@
+{
+  "name": "SNS Alert Channel",
+  "type": "sns",
+  "settings": {
+    "topic": "{{GRAFANA_WEBHOOK_TOPIC_ARN}}",
+    "subject": "Grafana Alert: {{.CommonLabels.alertname}}",
+    "message": "{{.CommonAnnotations.summary}}\n\nStatus: {{.Status}}\nSeverity: {{.CommonLabels.severity}}\nService: DocStorageService\n\nDetails:\n{{range .Alerts}}- {{.Annotations.description}}{{end}}",
+    "authProvider": "default"
+  },
+  "uid": "sns-alerts",
+  "isDefault": true
+}

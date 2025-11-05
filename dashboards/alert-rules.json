@@ -1,0 +1,74 @@
+{
+  "groups": [
+    {
+      "name": "DocStorageService_Alerts",
+      "interval": "1m",
+      "rules": [
+        {
+          "alert": "DocStorageService_High_Error_Rate_Sev3",
+          "expr": "rate(doc_operations_total{service=\"DocStorageService\", status_type=\"service_error\"}[1m]) * 60 >= 2",
+          "for": "0m",
+          "labels": {
+            "severity": "sev3",
+            "service": "DocStorageService",
+            "alert_type": "service_error_rate",
+            "alertname": "DocStorageService_High_Error_Rate_Sev3"
+          },
+          "annotations": {
+            "summary": "DocStorageService has high service error rate (Sev3)",
+            "description": "DocStorageService is experiencing {{ $value }} service errors per minute (threshold: 2). This indicates system issues that need attention.",
+            "runbook_url": "https://wiki.company.com/runbooks/docstorageservice-errors"
+          }
+        },
+        {
+          "alert": "DocStorageService_High_Error_Rate_Sev2",
+          "expr": "rate(doc_operations_total{service=\"DocStorageService\", status_type=\"service_error\"}[1m]) * 60 >= 5",
+          "for": "0m",
+          "labels": {
+            "severity": "sev2",
+            "service": "DocStorageService",
+            "alert_type": "service_error_rate",
+            "alertname": "DocStorageService_High_Error_Rate_Sev2"
+          },
+          "annotations": {
+            "summary": "DocStorageService has critical service error rate (Sev2)",
+            "description": "DocStorageService is experiencing {{ $value }} service errors per minute (threshold: 5). This indicates critical system issues requiring immediate attention.",
+            "runbook_url": "https://wiki.company.com/runbooks/docstorageservice-errors"
+          }
+        }
+      ]
+    }
+  ],
+  "contactPoints": [
+    {
+      "uid": "sns-contact-point",
+      "name": "SNS Notifications",
+      "type": "sns",
+      "settings": {
+        "topic": "{{GRAFANA_WEBHOOK_TOPIC_ARN}}",
+        "subject": "Grafana Alert: {{ .GroupLabels.alertname }}",
+        "message": "{{ .CommonAnnotations.summary }}\n\nStatus: {{ .Status }}\nSeverity: {{ .CommonLabels.severity }}\nService: DocStorageService\n\nDetails:\n{{ range .Alerts }}- {{ .Annotations.description }}{{ end }}",
+        "authProvider": "default"
+      }
+    }
+  ],
+  "notificationPolicies": [
+    {
+      "receiver": "sns-contact-point",
+      "group_by": ["alertname", "severity"],
+      "group_wait": "10s",
+      "group_interval": "5m",
+      "repeat_interval": "12h",
+      "routes": [
+        {
+          "receiver": "sns-contact-point",
+          "matchers": ["severity=~sev2|sev3"],
+          "group_by": ["alertname"],
+          "group_wait": "10s",
+          "group_interval": "5m",
+          "repeat_interval": "12h"
+        }
+      ]
+    }
+  ]
+}

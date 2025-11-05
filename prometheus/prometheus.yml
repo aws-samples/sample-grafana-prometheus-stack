@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+remote_write:
+  - url: "{{PROMETHEUS_REMOTE_WRITE_URL}}"
+    sigv4:
+      region: us-west-2
+
+scrape_configs:
+  - job_name: "data-processor"
+    static_configs:
+      - targets: ["localhost:8080"]
+    scrape_interval: 5s
+    metrics_path: "/metrics"
