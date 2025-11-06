@@ -17,11 +17,10 @@ case $STACK_OPERATION in
     git clone https://github.com/aws-samples/sample-grafana-prometheus-stack.git grafana-workshop
     cd grafana-workshop
     
-    npm install
-    npm run build
-    cdk bootstrap --require-approval never
+    # Run complete setup script
+    ./scripts/complete-setup.sh
     
-    echo "✅ Workshop ready! Run: cdk deploy --require-approval never"
+    echo "✅ Workshop environment fully deployed!"
     ;;
     
   delete)

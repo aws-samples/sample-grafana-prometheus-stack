@@ -1,5 +1,38 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Grafana Observability Workshop Environment'
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Grafana Observability Workshop Environment"
+
+Parameters:
+  RepoUrl:
+    Type: String
+    Description: Workshop repository URL
+    Default: ""
+  RepoBranchName:
+    Type: String
+    Description: Repository branch name
+    Default: main
+  ParticipantRoleArn:
+    Type: String
+    Description: Participant IAM role ARN
+    Default: ""
+  ParticipantAssumedRoleArn:
+    Type: String
+    Description: Participant assumed role ARN
+    Default: ""
+  AssetsBucketName:
+    Type: String
+    Description: Assets S3 bucket name
+    Default: ""
+  AssetsBucketPrefix:
+    Type: String
+    Description: Assets S3 bucket prefix
+    Default: ""
+  IsWorkshopStudioEnv:
+    Type: String
+    Description: Is this a Workshop Studio environment
+    Default: "true"
+
+Conditions:
+  HasAssumedRole: !Not [!Equals [!Ref ParticipantAssumedRoleArn, ""]]
 
 Resources:
   WorkshopVPC:
@@ -24,7 +57,7 @@ Resources:
       VpcId: !Ref WorkshopVPC
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-      AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone: !Select [0, !GetAZs ""]
 
   RouteTable:
     Type: AWS::EC2::RouteTable
@@ -49,7 +82,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -57,6 +90,37 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AdministratorAccess
+
+  ParticipantRolePolicy:
+    Type: AWS::IAM::Policy
+    Condition: HasAssumedRole
+    Properties:
+      PolicyName: GrafanaWorkshopAccess
+      Roles:
+        - !Select [1, !Split ['/', !Select [5, !Split [':', !Ref ParticipantAssumedRoleArn]]]]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - grafana:*
+              - aps:*
+              - logs:*
+              - ecs:Describe*
+              - ecs:List*
+              - cloudformation:Describe*
+              - cloudformation:List*
+              - cloudformation:GetTemplate
+              - ec2:Describe*
+              - elasticloadbalancing:Describe*
+              - s3:GetObject
+              - s3:PutObject
+              - s3:ListBucket
+              - iam:GetRole
+              - iam:PassRole
+              - sso:DescribeRegisteredRegions
+              - sso:ListInstances
+            Resource: '*'
 
   WorkshopProfile:
     Type: AWS::IAM::InstanceProfile
@@ -87,6 +151,6 @@ Resources:
 
 Outputs:
   Cloud9URL:
-    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloud9/ide/${Cloud9Environment}'
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/cloud9/ide/${Cloud9Environment}"
   Region:
     Value: !Ref AWS::Region
