@@ -34,12 +34,11 @@ A complete observability stack demonstrating metrics, traces, and logs collectio
                     │  │ Loki            │ │ ◄── Logs
                     │  │ (ECS)           │ │
                     │  └─────────────────┘ │
-                    └──────────────────────┘
-                                │
-                                ▼
-                    ┌──────────────────────┐
-                    │ AWS Managed Grafana  │
-                    │   (Visualization)    │
+                    │                      │
+                    │  ┌─────────────────┐ │
+                    │  │ Grafana         │ │ ◄── Visualization
+                    │  │ (ECS)           │ │     (Self-hosted)
+                    │  └─────────────────┘ │
                     └──────────────────────┘
 ```
 
@@ -52,7 +51,7 @@ A complete observability stack demonstrating metrics, traces, and logs collectio
 - **S3 Bucket**: Data storage for the sample application
 
 ### Observability Stack
-- **AWS Managed Grafana**: Centralized visualization and dashboards
+- **Self-hosted Grafana (ECS)**: Centralized visualization and dashboards with automated setup
 - **AWS Managed Prometheus**: Scalable metrics storage and querying
 - **Tempo (ECS)**: Distributed tracing collection and storage
 - **Loki (ECS)**: Log aggregation and querying
@@ -154,7 +153,6 @@ logging.basicConfig(
 - AWS CLI configured with appropriate permissions
 - AWS CDK installed: `npm install -g aws-cdk`
 - Docker running locally
-- AWS SSO enabled in your account
 
 ### One-Command Deployment
 
@@ -162,7 +160,7 @@ logging.basicConfig(
 scripts/complete-setup.sh
 ```
 
-**Note**: See `docs/manual-steps.md` for any required manual steps after deployment.
+**Note**: The deployment is fully automated. No manual steps required after running the script.
 
 ### What complete-setup.sh Does
 
@@ -172,42 +170,35 @@ scripts/complete-setup.sh
 ```
 
 **Creates:**
-- ECS Fargate cluster with 3 services:
+- ECS Fargate cluster with 4 services:
   - Data Processor (Flask app + Prometheus scraper)
   - Tempo (tracing backend)
   - Loki (logging backend)
+  - Grafana (visualization dashboard)
 - Application Load Balancers for each service
 - AWS Managed Prometheus workspace
 - S3 bucket for data storage
 - Lambda function for automated testing
 - IAM roles and policies
 
-#### Step 2: Grafana Workspace Setup
+#### Step 2: Data Source Configuration
 ```bash
-grafana/setup-grafana.sh  # If workspace doesn't exist
-```
-
-**Creates:**
-- AWS Managed Grafana workspace with SERVICE_MANAGED permissions
-- IAM role with Prometheus access policies
-- SSO integration for authentication
-- Workspace configuration for data source access
-
-#### Step 3: Data Source Configuration
-```bash
-grafana/configure-grafana.sh  # Called by setup-grafana.sh
+# Automatic configuration during deployment
 ```
 
 **Configures:**
 - **Prometheus Data Source**: 
   ```json
   {
-    "name": "AWS Managed Prometheus",
+    "name": "Prometheus",
     "type": "prometheus",
-    "url": "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/{workspace-id}/",
+    "url": "https://aps-workspaces.us-west-2.amazonaws.com/workspaces/{workspace-id}/",
     "access": "proxy",
     "isDefault": true,
-    "jsonData": {}  // SERVICE_MANAGED auth
+    "jsonData": {
+      "sigV4Auth": true,
+      "sigV4AuthType": "default"
+    }
   }
   ```
 
@@ -306,9 +297,17 @@ scrape_configs:
 
 ### 1. Grafana Dashboard
 ```bash
-# Get Grafana URL from AWS Console
-aws grafana list-workspaces --region us-east-1
+# Get Grafana URL from stack outputs
+aws cloudformation describe-stacks \
+  --stack-name GrafanaObservabilityStackStack \
+  --region us-west-2 \
+  --query 'Stacks[0].Outputs[?OutputKey==`GrafanaURL`].OutputValue' \
+  --output text
 ```
+
+**Login credentials:**
+- Username: `admin`
+- Password: `admin`
 
 ### 2. Service Endpoints
 Check CloudFormation stack outputs:
@@ -324,22 +323,6 @@ aws cloudformation describe-stacks \
 tests/test.sh  # Creates metrics, traces, and logs
 ```
 
-## 🔍 Troubleshooting
-
-### Common Issues
-
-1. **No Prometheus Data**: 
-   - Check Prometheus scraper logs: `aws logs get-log-events --log-group-name /ecs/prometheus-scraper`
-   - Verify metrics endpoint: `curl {data-processor-lb}:9090/metrics`
-
-2. **Grafana Authentication Issues**:
-   - Ensure AWS SSO is enabled
-   - Check SERVICE_MANAGED permissions are configured
-
-3. **ECS Service Not Starting**:
-   - Check ECS service logs in CloudWatch
-   - Verify container architecture matches (linux/amd64)
-
 ## 🧹 Cleanup
 
 ```bash
@@ -349,7 +332,6 @@ cdk destroy
 
 ## 📚 Additional Resources
 
-- [AWS Managed Grafana Documentation](https://docs.aws.amazon.com/grafana/)
 - [AWS Managed Prometheus Documentation](https://docs.aws.amazon.com/prometheus/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [Grafana Tempo Documentation](https://grafana.com/docs/tempo/)
