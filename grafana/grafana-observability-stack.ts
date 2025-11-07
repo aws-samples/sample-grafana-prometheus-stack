@@ -453,6 +453,72 @@ EOF
       },
     });
 
+    // Self-hosted Grafana Service
+    const grafanaTaskDefinition = new ecs.FargateTaskDefinition(this, 'GrafanaTask', {
+      memoryLimitMiB: 1024,
+      cpu: 512,
+    });
+
+    const grafanaContainer = grafanaTaskDefinition.addContainer('grafana', {
+      image: ecs.ContainerImage.fromRegistry('grafana/grafana:latest'),
+      memoryLimitMiB: 1024,
+      portMappings: [{ containerPort: 3000, protocol: ecs.Protocol.TCP }],
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'grafana',
+        logGroup: new logs.LogGroup(this, 'GrafanaLogGroup', {
+          logGroupName: '/ecs/grafana',
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        }),
+      }),
+      environment: {
+        GF_SECURITY_ADMIN_USER: 'admin',
+        GF_SECURITY_ADMIN_PASSWORD: 'admin',
+        GF_SERVER_ROOT_URL: 'http://localhost:3000',
+        GF_AUTH_ANONYMOUS_ENABLED: 'false',
+        GF_USERS_ALLOW_SIGN_UP: 'false',
+        GF_INSTALL_PLUGINS: '',
+      },
+    });
+
+    const grafanaService = new ecs.FargateService(this, 'GrafanaService', {
+      cluster,
+      taskDefinition: grafanaTaskDefinition,
+      desiredCount: 1,
+      securityGroups: [ecsSecurityGroup],
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+      },
+      assignPublicIp: false,
+    });
+
+    const grafanaLoadBalancer = new elbv2.ApplicationLoadBalancer(this, 'GrafanaLoadBalancer', {
+      vpc,
+      internetFacing: true,
+    });
+
+    const grafanaListener = grafanaLoadBalancer.addListener('GrafanaListener', {
+      port: 80,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+    });
+
+    grafanaListener.addTargets('GrafanaTargets', {
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      targets: [grafanaService],
+      healthCheck: {
+        path: '/api/health',
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(5),
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 3,
+      },
+    });
+
+    new cdk.CfnOutput(this, 'GrafanaURL', {
+      value: `http://${grafanaLoadBalancer.loadBalancerDnsName}`,
+      description: 'Grafana Dashboard URL (admin/admin)',
+    });
+
     // Data Processor ECS Service
     const dataProcessorTaskRole = new iam.Role(this, 'DataProcessorTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),

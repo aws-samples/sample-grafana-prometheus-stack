@@ -114,27 +114,22 @@ echo "🔌 Adding Prometheus data source..."
 TIMESTAMP=$(date +%s)
 KEY_NAME="config-key-$TIMESTAMP"
 
-# Create API key
+# Create API key using AWS Grafana API
 echo "🔑 Creating temporary API key..."
-echo ""
-echo "🛠️  Please create an API key manually in Grafana:"
-echo "   1. Go to: $WORKSPACE_URL"
-echo "   2. Sign in with AWS SSO"
-echo "   3. Go to Administration → Service accounts (or Configuration → API Keys)"
-echo "   4. Click 'Add service account' or 'New API key'"
-echo "   5. Name: $KEY_NAME"
-echo "   6. Role: Admin"
-echo "   7. Time to live: 10 minutes (600 seconds)"
-echo "   8. Click 'Add' and copy the generated key"
-echo ""
-read -p "Enter the API key: " API_KEY
+API_KEY=$(aws grafana create-workspace-api-key \
+  --key-name "config-key-$(date +%s)" \
+  --key-role ADMIN \
+  --seconds-to-live 600 \
+  --workspace-id "$WORKSPACE_ID" \
+  --region $REGION \
+  --query 'key' --output text)
 
 if [ -z "$API_KEY" ]; then
-    echo "❌ No API key provided"
+    echo "❌ Failed to create API key"
     exit 1
 fi
 
-echo "✅ API key received"
+echo "✅ API key created"
 
 # Skip API test since it's timing out but the actual API calls work
 echo "🔍 Skipping API test (proceeding directly to configuration)..."

@@ -393,7 +393,7 @@
           "textFormat": "{{ $value }} errors/min"
         }
       ]
-      }
+    }
     ],
     "time": {
       "from": "now-1h",
