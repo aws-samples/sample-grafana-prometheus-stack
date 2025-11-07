@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e
 
-case $STACK_OPERATION in
-  create|update)
+STACK_OPERATION=$1
+
+if [[ "$STACK_OPERATION" == "create" || "$STACK_OPERATION" == "update" ]]; then
     echo "🎓 Deploying Workshop Environment..."
     
     # Install Node.js 22 LTS
@@ -16,9 +16,8 @@ case $STACK_OPERATION in
     ./scripts/complete-setup.sh
     
     echo "✅ Workshop environment fully deployed!"
-    ;;
-    
-  delete)
+   
+elif [ "$STACK_OPERATION" == "delete" ]; then
     echo "🧹 Cleaning up workshop..."
     cdk destroy --force || true
     
@@ -26,9 +25,7 @@ case $STACK_OPERATION in
     aws ssm delete-parameter --name /workshop/grafana-url --region ${AWS_REGION:-us-west-2} || true
     aws ssm delete-parameter --name /workshop/grafana-api-key --region ${AWS_REGION:-us-west-2} || true
     ;;
-    
-  *)
-    echo "Unknown operation: $STACK_OPERATION"
+else
+    echo "Invalid stack operation!"
     exit 1
-    ;;
-esac
+fi
