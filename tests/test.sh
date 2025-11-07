@@ -65,7 +65,7 @@ echo "=============================="
 
 # Test 1: Health check
 echo "❤️  Health check..."
-HEALTH=$(curl -s "${DATA_PROCESSOR_ENDPOINT}/health")
+HEALTH=$(curl -s --max-time 10 --max-time 10 "${DATA_PROCESSOR_ENDPOINT}/health")
 if echo "$HEALTH" | jq -e '.status' > /dev/null 2>&1; then
   echo "✅ Health check passed"
 else
@@ -74,7 +74,7 @@ fi
 
 # Test 2: Store data
 echo "📝 Storing test data..."
-RESPONSE=$(curl -s -X POST "${DATA_PROCESSOR_ENDPOINT}/data" \
+RESPONSE=$(curl -s --max-time 10 --max-time 10 -X POST "${DATA_PROCESSOR_ENDPOINT}/data" \
   -H "Content-Type: application/json" \
   -d '{"message": "Test data", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "value": 42}')
 
@@ -84,7 +84,7 @@ if [ "$KEY" != "null" ] && [ -n "$KEY" ]; then
   
   # Test 3: Retrieve data
   echo "📖 Retrieving stored data..."
-  RETRIEVED=$(curl -s "${DATA_PROCESSOR_ENDPOINT}/data/${KEY}")
+  RETRIEVED=$(curl -s --max-time 10 --max-time 10 "${DATA_PROCESSOR_ENDPOINT}/data/${KEY}")
   if echo "$RETRIEVED" | jq -e '.message' > /dev/null 2>&1; then
     echo "✅ Data retrieved successfully"
   else
@@ -96,16 +96,17 @@ fi
 
 # Test 4: Get metrics
 echo "📊 Testing metrics endpoint..."
-METRICS=$(curl -s "$METRICS_ENDPOINT")
-if echo "$METRICS" | grep -q "http_requests_total"; then
-  echo "✅ Metrics endpoint working"
+# Use port 80 instead of 9090 since metrics are on the main app port
+METRICS=$(curl -s --max-time 10 "${DATA_PROCESSOR_ENDPOINT}/metrics")
+if echo "$METRICS" | grep -q "doc_operations_total"; then
+  echo "✅ Metrics endpoint working (doc_operations_total found)"
 else
   echo "❌ Metrics endpoint not working"
 fi
 
 # Test 5: Test 404
 echo "🔍 Testing 404 handling..."
-NOT_FOUND=$(curl -s "${DATA_PROCESSOR_ENDPOINT}/data/nonexistent")
+NOT_FOUND=$(curl -s --max-time 10 --max-time 10 "${DATA_PROCESSOR_ENDPOINT}/data/nonexistent")
 if echo "$NOT_FOUND" | jq -e '.error' > /dev/null 2>&1; then
   echo "✅ 404 handling working"
 else
