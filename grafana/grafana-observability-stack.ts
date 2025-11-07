@@ -486,9 +486,9 @@ EOF
       desiredCount: 1,
       securityGroups: [ecsSecurityGroup],
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        subnetType: ec2.SubnetType.PUBLIC,
       },
-      assignPublicIp: false,
+      assignPublicIp: true,
     });
 
     const grafanaLoadBalancer = new elbv2.ApplicationLoadBalancer(this, 'GrafanaLoadBalancer', {

@@ -243,6 +243,36 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
   else
     echo "⚠️  Expected 2 alerts, found $ALERTS"
   fi
+  
+  # Create service account and API key
+  echo "🔑 Creating Grafana service account and API key..."
+  
+  # Create service account
+  SA_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+    -d '{"name":"mcp-server","role":"Admin"}' \
+    "$GRAFANA_URL/api/serviceaccounts")
+  
+  SA_ID=$(echo "$SA_RESPONSE" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+  
+  if [ -n "$SA_ID" ]; then
+    # Generate API token
+    TOKEN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+      -d '{"name":"mcp-token"}' \
+      "$GRAFANA_URL/api/serviceaccounts/$SA_ID/tokens")
+    
+    API_KEY=$(echo "$TOKEN_RESPONSE" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
+    
+    if [ -n "$API_KEY" ]; then
+      # Store in Parameter Store
+      aws ssm put-parameter --name /workshop/grafana-api-key --value "$API_KEY" --type SecureString --overwrite --region $REGION
+      echo "✅ Grafana API key created and stored in Parameter Store"
+      echo "   - /workshop/grafana-api-key: [SecureString]"
+    else
+      echo "⚠️  Failed to generate API token"
+    fi
+  else
+    echo "⚠️  Failed to create service account"
+  fi
 else
   echo "⚠️  Could not find Grafana URL, skipping Parameter Store export"
 fi
