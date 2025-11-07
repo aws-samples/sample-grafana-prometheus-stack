@@ -24,7 +24,7 @@ elif [ "$STACK_OPERATION" == "delete" ]; then
     # Clean up Parameter Store
     aws ssm delete-parameter --name /workshop/grafana-url --region ${AWS_REGION:-us-west-2} || true
     aws ssm delete-parameter --name /workshop/grafana-api-key --region ${AWS_REGION:-us-west-2} || true
-    ;;
+  
 else
     echo "Invalid stack operation!"
     exit 1
