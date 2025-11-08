@@ -10,6 +10,9 @@
     "test": "jest",
     "cdk": "cdk"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "22.7.9",

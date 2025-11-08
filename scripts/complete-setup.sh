@@ -3,6 +3,12 @@
 echo "🚀 Complete Grafana Observability Stack Setup"
 echo "============================================="
 
+# Install AWS CDK if not present
+if ! command -v cdk &> /dev/null; then
+    echo "📦 Installing AWS CDK..."
+    npm install -g aws-cdk
+fi
+
 # Check required tools
 echo "🔍 Checking prerequisites..."
 for tool in aws npm cdk docker; do

@@ -5,13 +5,6 @@ STACK_OPERATION=$1
 if [[ "$STACK_OPERATION" == "Create" || "$STACK_OPERATION" == "Update" ]]; then
     echo "🎓 Deploying Workshop Environment..."
     
-    # Install Node.js 22 LTS
-    curl -sL https://rpm.nodesource.com/setup_22.x | sudo bash -
-    sudo yum install -y nodejs jq git
-    
-    # Install AWS CDK
-    sudo npm install -g aws-cdk
-    
     # Run complete setup script (includes Parameter Store export)
     ./scripts/complete-setup.sh
     
