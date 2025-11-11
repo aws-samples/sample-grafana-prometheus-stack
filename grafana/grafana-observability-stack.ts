@@ -484,6 +484,7 @@ EOF
         GF_AUTH_ANONYMOUS_ENABLED: 'false',
         GF_USERS_ALLOW_SIGN_UP: 'false',
         GF_INSTALL_PLUGINS: '',
+        AWS_REGION: this.region,
       },
     });
 
