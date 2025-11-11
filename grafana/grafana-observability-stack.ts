@@ -459,6 +459,13 @@ EOF
       cpu: 512,
     });
 
+    // Grant Grafana permissions to query Prometheus
+    grafanaTaskDefinition.addToTaskRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['aps:QueryMetrics', 'aps:GetSeries', 'aps:GetLabels', 'aps:GetMetricMetadata'],
+      resources: [prometheusWorkspace.attrArn],
+    }));
+
     const grafanaContainer = grafanaTaskDefinition.addContainer('grafana', {
       image: ecs.ContainerImage.fromRegistry('grafana/grafana:latest'),
       memoryLimitMiB: 1024,

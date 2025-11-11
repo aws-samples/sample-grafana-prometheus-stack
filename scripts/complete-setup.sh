@@ -138,14 +138,20 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
   
   # Import alert rules
   echo "🚨 Importing alert rules..."
-  ALERT_JSON=$(cat dashboards/alert-rules.json)
   
   # Get Prometheus data source UID
   PROM_UID=$(curl -s -u admin:admin "$GRAFANA_URL/api/datasources/name/Prometheus" | grep -o '"uid":"[^"]*"' | cut -d'"' -f4)
   
+  # Create alerts folder
+  FOLDER_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+    -d '{"title":"Alerts"}' \
+    "$GRAFANA_URL/api/folders")
+  FOLDER_UID=$(echo "$FOLDER_RESPONSE" | grep -o '"uid":"[^"]*"' | head -1 | cut -d'"' -f4)
+  
   # Create alert rule group
   curl -X POST -H "Content-Type: application/json" -u admin:admin \
     -d "{
+      \"folderUID\": \"$FOLDER_UID\",
       \"name\": \"DocStorageService_Alerts\",
       \"interval\": \"1m\",
       \"rules\": [
