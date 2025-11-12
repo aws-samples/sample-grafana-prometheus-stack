@@ -96,7 +96,16 @@ This stack works with the [Grafana MCP Server](https://github.com/aws-samples/gr
 - Investigate incidents and anomalies
 - Provide intelligent troubleshooting recommendations
 
-Deploy both stacks together for a complete agentic observability solution.
+### MCP Server Integration
+
+After deployment, the following parameters are automatically stored in AWS Systems Manager Parameter Store for MCP server connectivity:
+
+- `/workshop/grafana-url` - Grafana endpoint URL
+- `/workshop/grafana-username` - Admin username (default: admin)
+- `/workshop/grafana-password` - Admin password (SecureString)
+- `/workshop/grafana-api-key` - Service account API key (SecureString)
+
+The Grafana MCP Server can retrieve these parameters to automatically connect to your Grafana instance.
 
 ## Cleanup
 
