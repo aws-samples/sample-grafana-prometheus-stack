@@ -485,6 +485,7 @@ EOF
         GF_USERS_ALLOW_SIGN_UP: 'false',
         GF_INSTALL_PLUGINS: '',
         AWS_REGION: this.region,
+        PROMETHEUS_WORKSPACE_URL: `https://aps-workspaces.${this.region}.amazonaws.com/workspaces/${prometheusWorkspace.attrWorkspaceId}`,
       },
     });
 
