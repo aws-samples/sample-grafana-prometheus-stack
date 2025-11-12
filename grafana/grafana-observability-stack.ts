@@ -467,7 +467,7 @@ EOF
     }));
 
     const grafanaContainer = grafanaTaskDefinition.addContainer('grafana', {
-      image: ecs.ContainerImage.fromRegistry('grafana/grafana:latest'),
+      image: ecs.ContainerImage.fromAsset('./grafana'),
       memoryLimitMiB: 1024,
       portMappings: [{ containerPort: 3000, protocol: ecs.Protocol.TCP }],
       logging: ecs.LogDrivers.awsLogs({
