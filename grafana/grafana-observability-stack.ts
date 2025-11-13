@@ -509,12 +509,15 @@ EOF
     const grafanaListener = grafanaLoadBalancer.addListener('GrafanaListener', {
       port: 80,
       protocol: elbv2.ApplicationProtocol.HTTP,
+      defaultAction: elbv2.ListenerAction.fixedResponse(404, {
+        contentType: 'text/plain',
+        messageBody: 'Not Found',
+      }),
     });
 
-    grafanaListener.addTargets('GrafanaTargets', {
+    const grafanaTargetGroup = grafanaListener.addTargets('GrafanaTargets', {
       port: 3000,
       protocol: elbv2.ApplicationProtocol.HTTP,
-      targets: [grafanaService],
       healthCheck: {
         path: '/api/health',
         interval: cdk.Duration.seconds(30),
@@ -523,6 +526,8 @@ EOF
         unhealthyThresholdCount: 3,
       },
     });
+
+    grafanaService.attachToApplicationTargetGroup(grafanaTargetGroup);
 
     new cdk.CfnOutput(this, 'GrafanaURL', {
       value: `http://${grafanaLoadBalancer.loadBalancerDnsName}`,
