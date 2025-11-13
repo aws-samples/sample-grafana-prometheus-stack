@@ -515,8 +515,6 @@ EOF
       port: 3000,
       protocol: elbv2.ApplicationProtocol.HTTP,
       targets: [grafanaService],
-      targetGroupName: 'grafana-tg',
-      targetType: elbv2.TargetType.IP,
       healthCheck: {
         path: '/api/health',
         interval: cdk.Duration.seconds(30),
