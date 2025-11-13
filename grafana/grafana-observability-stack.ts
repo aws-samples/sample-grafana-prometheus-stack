@@ -506,15 +506,11 @@ EOF
       internetFacing: true,
     });
 
-    const grafanaListener = grafanaLoadBalancer.addListener('GrafanaListener', {
-      port: 80,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-    });
-
-    grafanaListener.addTargets('GrafanaTargets', {
+    const grafanaTargetGroup = new elbv2.ApplicationTargetGroup(this, 'GrafanaTargetGroup', {
+      vpc,
       port: 3000,
       protocol: elbv2.ApplicationProtocol.HTTP,
-      targets: [grafanaService],
+      targetType: elbv2.TargetType.IP,
       healthCheck: {
         path: '/api/health',
         interval: cdk.Duration.seconds(30),
@@ -522,6 +518,14 @@ EOF
         healthyThresholdCount: 2,
         unhealthyThresholdCount: 3,
       },
+    });
+
+    grafanaService.attachToApplicationTargetGroup(grafanaTargetGroup);
+
+    const grafanaListener = grafanaLoadBalancer.addListener('GrafanaListener', {
+      port: 80,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      defaultTargetGroups: [grafanaTargetGroup],
     });
 
     new cdk.CfnOutput(this, 'GrafanaURL', {
