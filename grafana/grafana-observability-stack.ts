@@ -493,6 +493,7 @@ EOF
       cluster,
       taskDefinition: grafanaTaskDefinition,
       desiredCount: 1,
+      healthCheckGracePeriod: cdk.Duration.seconds(120),
       securityGroups: [ecsSecurityGroup],
       vpcSubnets: {
         subnetType: ec2.SubnetType.PUBLIC,
