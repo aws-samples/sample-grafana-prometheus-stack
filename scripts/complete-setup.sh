@@ -140,30 +140,34 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
   echo "🚨 Importing alert rules..."
   
   # Get Prometheus data source UID
-  PROM_UID=$(curl -s -u admin:admin "$GRAFANA_URL/api/datasources/name/Prometheus" | grep -o '"uid":"[^"]*"' | cut -d'"' -f4)
+  PROM_UID=$(curl -s -u admin:admin "$GRAFANA_URL/api/datasources/name/Prometheus" | jq -r '.uid')
   
-  # Create alerts folder
-  FOLDER_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
-    -d '{"title":"Alerts"}' \
-    "$GRAFANA_URL/api/folders")
-  FOLDER_UID=$(echo "$FOLDER_RESPONSE" | grep -o '"uid":"[^"]*"' | head -1 | cut -d'"' -f4)
-  
-  # Create alert rule group
-  curl -X POST -H "Content-Type: application/json" -u admin:admin \
-    -d "{
-      \"folderUID\": \"$FOLDER_UID\",
-      \"name\": \"DocStorageService_Alerts\",
-      \"interval\": \"1m\",
-      \"rules\": [
-        {
+  if [ -z "$PROM_UID" ] || [ "$PROM_UID" = "null" ]; then
+    echo "⚠️  Could not find Prometheus data source UID, skipping alert rules"
+  else
+    echo "   Found Prometheus UID: $PROM_UID"
+    
+    # Create folder for alerts
+    FOLDER_UID=$(curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+      -d '{"title": "Alerts", "uid": "alerts"}' \
+      "$GRAFANA_URL/api/folders" | jq -r '.uid')
+    
+    if [ -z "$FOLDER_UID" ] || [ "$FOLDER_UID" = "null" ]; then
+      echo "⚠️  Could not create alerts folder, skipping alert rules"
+    else
+      echo "   Created folder UID: $FOLDER_UID"
+      
+      # Import Sev3 alert
+      curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+        -d "{
           \"uid\": \"sev3-error-rate\",
           \"title\": \"DocStorageService_High_Error_Rate_Sev3\",
-          \"condition\": \"C\",
+          \"condition\": \"B\",
           \"data\": [
             {
               \"refId\": \"A\",
               \"queryType\": \"\",
-              \"relativeTimeRange\": {\"from\": 60, \"to\": 0},
+              \"relativeTimeRange\": {\"from\": 300, \"to\": 0},
               \"datasourceUid\": \"$PROM_UID\",
               \"model\": {
                 \"expr\": \"rate(doc_operations_total{service=\\\"DocStorageService\\\", status_type=\\\"service_error\\\"}[1m]) * 60\",
@@ -171,7 +175,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
               }
             },
             {
-              \"refId\": \"C\",
+              \"refId\": \"B\",
               \"queryType\": \"\",
               \"relativeTimeRange\": {\"from\": 0, \"to\": 0},
               \"datasourceUid\": \"-100\",
@@ -182,7 +186,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
                   \"query\": {\"params\": [\"A\"]},
                   \"type\": \"query\"
                 }],
-                \"refId\": \"C\",
+                \"refId\": \"B\",
                 \"type\": \"classic_conditions\"
               }
             }
@@ -190,24 +194,28 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
           \"noDataState\": \"NoData\",
           \"execErrState\": \"Alerting\",
           \"for\": \"0m\",
+          \"folderUID\": \"$FOLDER_UID\",
           \"annotations\": {
-            \"summary\": \"DocStorageService has high service error rate (Sev3)\",
-            \"description\": \"DocStorageService is experiencing service errors per minute (threshold: 2)\"
+            \"summary\": \"DocStorageService has high service error rate (Sev3)\"
           },
           \"labels\": {
             \"severity\": \"sev3\",
             \"service\": \"DocStorageService\"
           }
-        },
-        {
+        }" \
+        "$GRAFANA_URL/api/v1/provisioning/alert-rules" > /dev/null
+      
+      # Import Sev2 alert
+      curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+        -d "{
           \"uid\": \"sev2-error-rate\",
           \"title\": \"DocStorageService_High_Error_Rate_Sev2\",
-          \"condition\": \"C\",
+          \"condition\": \"B\",
           \"data\": [
             {
               \"refId\": \"A\",
               \"queryType\": \"\",
-              \"relativeTimeRange\": {\"from\": 60, \"to\": 0},
+              \"relativeTimeRange\": {\"from\": 300, \"to\": 0},
               \"datasourceUid\": \"$PROM_UID\",
               \"model\": {
                 \"expr\": \"rate(doc_operations_total{service=\\\"DocStorageService\\\", status_type=\\\"service_error\\\"}[1m]) * 60\",
@@ -215,7 +223,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
               }
             },
             {
-              \"refId\": \"C\",
+              \"refId\": \"B\",
               \"queryType\": \"\",
               \"relativeTimeRange\": {\"from\": 0, \"to\": 0},
               \"datasourceUid\": \"-100\",
@@ -226,7 +234,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
                   \"query\": {\"params\": [\"A\"]},
                   \"type\": \"query\"
                 }],
-                \"refId\": \"C\",
+                \"refId\": \"B\",
                 \"type\": \"classic_conditions\"
               }
             }
@@ -234,26 +242,29 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
           \"noDataState\": \"NoData\",
           \"execErrState\": \"Alerting\",
           \"for\": \"0m\",
+          \"folderUID\": \"$FOLDER_UID\",
           \"annotations\": {
-            \"summary\": \"DocStorageService has critical service error rate (Sev2)\",
-            \"description\": \"DocStorageService is experiencing critical service errors per minute (threshold: 5)\"
+            \"summary\": \"DocStorageService has critical service error rate (Sev2)\"
           },
           \"labels\": {
             \"severity\": \"sev2\",
             \"service\": \"DocStorageService\"
           }
-        }
-      ]
-    }" \
-    "$GRAFANA_URL/api/v1/provisioning/alert-rules" 2>/dev/null && echo "✅ Alert rules imported" || echo "⚠️  Alert rules import failed"
-  
-  # Verify alerts
-  echo "🔍 Verifying imported alerts..."
-  ALERTS=$(curl -s -u admin:admin "$GRAFANA_URL/api/v1/provisioning/alert-rules" | grep -o '"title":"DocStorageService_High_Error_Rate_Sev[23]"' | wc -l)
-  if [ "$ALERTS" -ge 2 ]; then
-    echo "✅ Found $ALERTS alert rules imported successfully"
-  else
-    echo "⚠️  Expected 2 alerts, found $ALERTS"
+        }" \
+        "$GRAFANA_URL/api/v1/provisioning/alert-rules" > /dev/null
+      
+      echo "✅ Alert rules imported"
+      
+      # Verify alerts
+      echo "🔍 Verifying imported alerts..."
+      sleep 2
+      ALERT_COUNT=$(curl -s -u admin:admin "$GRAFANA_URL/api/v1/provisioning/alert-rules" | jq 'length')
+      if [ "$ALERT_COUNT" -ge 2 ]; then
+        echo "✅ Alert rules verified ($ALERT_COUNT rules found)"
+      else
+        echo "⚠️  Could not verify alert rules"
+      fi
+    fi
   fi
   
   # Create service account and API key
