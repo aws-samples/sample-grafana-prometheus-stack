@@ -159,107 +159,105 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
     else
       echo "   Using folder UID: $FOLDER_UID"
       
-      # Import Sev3 alert
-      curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+      # Create rule group with both alerts
+      curl -s -X PUT -H "Content-Type: application/json" -u admin:admin \
         -d "{
-          \"uid\": \"sev3-error-rate\",
-          \"title\": \"DocStorageService_High_Error_Rate_Sev3\",
-          \"condition\": \"B\",
-          \"intervalSeconds\": 60,
-          \"data\": [
+          \"name\": \"DocStorageService Alerts\",
+          \"interval\": 60,
+          \"rules\": [
             {
-              \"refId\": \"A\",
-              \"queryType\": \"\",
-              \"relativeTimeRange\": {\"from\": 300, \"to\": 0},
-              \"datasourceUid\": \"$PROM_UID\",
-              \"model\": {
-                \"expr\": \"rate(doc_operations_total{service=\\\"DocStorageService\\\", status_type=\\\"service_error\\\"}[1m]) * 60\",
-                \"refId\": \"A\"
+              \"uid\": \"sev3-error-rate\",
+              \"title\": \"DocStorageService_High_Error_Rate_Sev3\",
+              \"condition\": \"B\",
+              \"data\": [
+                {
+                  \"refId\": \"A\",
+                  \"queryType\": \"\",
+                  \"relativeTimeRange\": {\"from\": 300, \"to\": 0},
+                  \"datasourceUid\": \"$PROM_UID\",
+                  \"model\": {
+                    \"expr\": \"rate(doc_operations_total{service=\\\"DocStorageService\\\", status_type=\\\"service_error\\\"}[1m]) * 60\",
+                    \"refId\": \"A\"
+                  }
+                },
+                {
+                  \"refId\": \"B\",
+                  \"queryType\": \"\",
+                  \"relativeTimeRange\": {\"from\": 0, \"to\": 0},
+                  \"datasourceUid\": \"-100\",
+                  \"model\": {
+                    \"conditions\": [{
+                      \"evaluator\": {\"params\": [2], \"type\": \"gt\"},
+                      \"operator\": {\"type\": \"and\"},
+                      \"query\": {\"params\": [\"A\"]},
+                      \"reducer\": {\"params\": [], \"type\": \"last\"},
+                      \"type\": \"query\"
+                    }],
+                    \"refId\": \"B\",
+                    \"type\": \"classic_conditions\"
+                  }
+                }
+              ],
+              \"noDataState\": \"NoData\",
+              \"execErrState\": \"Alerting\",
+              \"for\": \"0m\",
+              \"annotations\": {
+                \"summary\": \"DocStorageService has high service error rate (Sev3)\"
+              },
+              \"labels\": {
+                \"severity\": \"sev3\",
+                \"service\": \"DocStorageService\"
               }
             },
             {
-              \"refId\": \"B\",
-              \"queryType\": \"\",
-              \"relativeTimeRange\": {\"from\": 0, \"to\": 0},
-              \"datasourceUid\": \"-100\",
-              \"model\": {
-                \"conditions\": [{
-                  \"evaluator\": {\"params\": [2], \"type\": \"gt\"},
-                  \"operator\": {\"type\": \"and\"},
-                  \"query\": {\"params\": [\"A\"]},
-                  \"reducer\": {\"params\": [], \"type\": \"last\"},
-                  \"type\": \"query\"
-                }],
-                \"refId\": \"B\",
-                \"type\": \"classic_conditions\"
+              \"uid\": \"sev2-error-rate\",
+              \"title\": \"DocStorageService_High_Error_Rate_Sev2\",
+              \"condition\": \"B\",
+              \"data\": [
+                {
+                  \"refId\": \"A\",
+                  \"queryType\": \"\",
+                  \"relativeTimeRange\": {\"from\": 300, \"to\": 0},
+                  \"datasourceUid\": \"$PROM_UID\",
+                  \"model\": {
+                    \"expr\": \"rate(doc_operations_total{service=\\\"DocStorageService\\\", status_type=\\\"service_error\\\"}[1m]) * 60\",
+                    \"refId\": \"A\"
+                  }
+                },
+                {
+                  \"refId\": \"B\",
+                  \"queryType\": \"\",
+                  \"relativeTimeRange\": {\"from\": 0, \"to\": 0},
+                  \"datasourceUid\": \"-100\",
+                  \"model\": {
+                    \"conditions\": [{
+                      \"evaluator\": {\"params\": [5], \"type\": \"gt\"},
+                      \"operator\": {\"type\": \"and\"},
+                      \"query\": {\"params\": [\"A\"]},
+                      \"reducer\": {\"params\": [], \"type\": \"last\"},
+                      \"type\": \"query\"
+                    }],
+                    \"refId\": \"B\",
+                    \"type\": \"classic_conditions\"
+                  }
+                }
+              ],
+              \"noDataState\": \"NoData\",
+              \"execErrState\": \"Alerting\",
+              \"for\": \"0m\",
+              \"annotations\": {
+                \"summary\": \"DocStorageService has critical service error rate (Sev2)\"
+              },
+              \"labels\": {
+                \"severity\": \"sev2\",
+                \"service\": \"DocStorageService\"
               }
             }
-          ],
-          \"noDataState\": \"NoData\",
-          \"execErrState\": \"Alerting\",
-          \"for\": \"0m\",
-          \"folderUID\": \"$FOLDER_UID\",
-          \"annotations\": {
-            \"summary\": \"DocStorageService has high service error rate (Sev3)\"
-          },
-          \"labels\": {
-            \"severity\": \"sev3\",
-            \"service\": \"DocStorageService\"
-          }
+          ]
         }" \
-        "$GRAFANA_URL/api/v1/provisioning/alert-rules" > /dev/null
+        "$GRAFANA_URL/api/v1/provisioning/folder/$FOLDER_UID/rule-groups/DocStorageService%20Alerts" > /dev/null
       
-      # Import Sev2 alert
-      curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
-        -d "{
-          \"uid\": \"sev2-error-rate\",
-          \"title\": \"DocStorageService_High_Error_Rate_Sev2\",
-          \"condition\": \"B\",
-          \"intervalSeconds\": 60,
-          \"data\": [
-            {
-              \"refId\": \"A\",
-              \"queryType\": \"\",
-              \"relativeTimeRange\": {\"from\": 300, \"to\": 0},
-              \"datasourceUid\": \"$PROM_UID\",
-              \"model\": {
-                \"expr\": \"rate(doc_operations_total{service=\\\"DocStorageService\\\", status_type=\\\"service_error\\\"}[1m]) * 60\",
-                \"refId\": \"A\"
-              }
-            },
-            {
-              \"refId\": \"B\",
-              \"queryType\": \"\",
-              \"relativeTimeRange\": {\"from\": 0, \"to\": 0},
-              \"datasourceUid\": \"-100\",
-              \"model\": {
-                \"conditions\": [{
-                  \"evaluator\": {\"params\": [5], \"type\": \"gt\"},
-                  \"operator\": {\"type\": \"and\"},
-                  \"query\": {\"params\": [\"A\"]},
-                  \"reducer\": {\"params\": [], \"type\": \"last\"},
-                  \"type\": \"query\"
-                }],
-                \"refId\": \"B\",
-                \"type\": \"classic_conditions\"
-              }
-            }
-          ],
-          \"noDataState\": \"NoData\",
-          \"execErrState\": \"Alerting\",
-          \"for\": \"0m\",
-          \"folderUID\": \"$FOLDER_UID\",
-          \"annotations\": {
-            \"summary\": \"DocStorageService has critical service error rate (Sev2)\"
-          },
-          \"labels\": {
-            \"severity\": \"sev2\",
-            \"service\": \"DocStorageService\"
-          }
-        }" \
-        "$GRAFANA_URL/api/v1/provisioning/alert-rules" > /dev/null
-      
-      echo "✅ Alert rules imported"
+      echo "✅ Alert rule group created"
       
       # Verify alerts
       echo "🔍 Verifying imported alerts..."

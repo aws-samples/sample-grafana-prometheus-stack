@@ -563,6 +563,7 @@ EOF
     dataProcessorTaskDefinition.addContainer('data-processor', {
       image: ecs.ContainerImage.fromAsset('./app'),
       memoryLimitMiB: 512,
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'data-processor' }),
       portMappings: [
         { containerPort: 8080, protocol: ecs.Protocol.TCP }, // App port
         { containerPort: 9090, protocol: ecs.Protocol.TCP }, // Metrics port
@@ -583,6 +584,7 @@ EOF
     dataProcessorTaskDefinition.addContainer('prometheus-scraper', {
       image: ecs.ContainerImage.fromAsset('./prometheus'),
       memoryLimitMiB: 256,
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'prometheus-scraper' }),
       portMappings: [
         { containerPort: 9091, protocol: ecs.Protocol.TCP }, // Prometheus server port
       ],
