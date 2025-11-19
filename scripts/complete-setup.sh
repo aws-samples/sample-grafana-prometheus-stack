@@ -108,14 +108,10 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
   
   # Configure Grafana data sources
   echo "🔧 Configuring Grafana data sources..."
-  PROMETHEUS_WORKSPACE_ID=$(aws cloudformation describe-stacks --stack-name GrafanaObservabilityStackStack --region $REGION --query 'Stacks[0].Outputs[?OutputKey==`PrometheusWorkspaceId`].OutputValue' --output text)
   LOKI_DNS=$(aws cloudformation describe-stacks --stack-name GrafanaObservabilityStackStack --region $REGION --query 'Stacks[0].Outputs[?OutputKey==`LokiLoadBalancerDNS`].OutputValue' --output text)
   TEMPO_DNS=$(aws cloudformation describe-stacks --stack-name GrafanaObservabilityStackStack --region $REGION --query 'Stacks[0].Outputs[?OutputKey==`TempoLoadBalancerDNS`].OutputValue' --output text)
   
-  # Add Prometheus data source
-  curl -X POST -H "Content-Type: application/json" -u admin:admin \
-    -d "{\"name\":\"Prometheus\",\"type\":\"prometheus\",\"url\":\"https://aps-workspaces.$REGION.amazonaws.com/workspaces/$PROMETHEUS_WORKSPACE_ID\",\"access\":\"proxy\",\"isDefault\":true,\"jsonData\":{\"httpMethod\":\"POST\",\"sigV4Auth\":true,\"sigV4AuthType\":\"default\",\"sigV4Region\":\"$REGION\"}}" \
-    "$GRAFANA_URL/api/datasources" 2>/dev/null || echo "⚠️  Prometheus data source may already exist"
+  # Prometheus is provisioned via datasources.yaml with SigV4 authentication
   
   # Add Loki data source
   curl -X POST -H "Content-Type: application/json" -u admin:admin \
@@ -147,15 +143,21 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
   else
     echo "   Found Prometheus UID: $PROM_UID"
     
-    # Create folder for alerts
-    FOLDER_UID=$(curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
+    # Create folder for alerts or get existing
+    FOLDER_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
       -d '{"title": "Alerts", "uid": "alerts"}' \
-      "$GRAFANA_URL/api/folders" | jq -r '.uid')
+      "$GRAFANA_URL/api/folders")
+    FOLDER_UID=$(echo "$FOLDER_RESPONSE" | jq -r '.uid')
+    
+    # If folder creation failed, try to get existing folder
+    if [ -z "$FOLDER_UID" ] || [ "$FOLDER_UID" = "null" ]; then
+      FOLDER_UID=$(curl -s -u admin:admin "$GRAFANA_URL/api/folders/alerts" | jq -r '.uid')
+    fi
     
     if [ -z "$FOLDER_UID" ] || [ "$FOLDER_UID" = "null" ]; then
-      echo "⚠️  Could not create alerts folder, skipping alert rules"
+      echo "⚠️  Could not create or find alerts folder, skipping alert rules"
     else
-      echo "   Created folder UID: $FOLDER_UID"
+      echo "   Using folder UID: $FOLDER_UID"
       
       # Import Sev3 alert
       curl -s -X POST -H "Content-Type: application/json" -u admin:admin \
@@ -163,6 +165,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
           \"uid\": \"sev3-error-rate\",
           \"title\": \"DocStorageService_High_Error_Rate_Sev3\",
           \"condition\": \"B\",
+          \"intervalSeconds\": 60,
           \"data\": [
             {
               \"refId\": \"A\",
@@ -184,6 +187,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
                   \"evaluator\": {\"params\": [2], \"type\": \"gt\"},
                   \"operator\": {\"type\": \"and\"},
                   \"query\": {\"params\": [\"A\"]},
+                  \"reducer\": {\"params\": [], \"type\": \"last\"},
                   \"type\": \"query\"
                 }],
                 \"refId\": \"B\",
@@ -211,6 +215,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
           \"uid\": \"sev2-error-rate\",
           \"title\": \"DocStorageService_High_Error_Rate_Sev2\",
           \"condition\": \"B\",
+          \"intervalSeconds\": 60,
           \"data\": [
             {
               \"refId\": \"A\",
@@ -232,6 +237,7 @@ if [ -n "$GRAFANA_URL" ] && [ "$GRAFANA_URL" != "None" ]; then
                   \"evaluator\": {\"params\": [5], \"type\": \"gt\"},
                   \"operator\": {\"type\": \"and\"},
                   \"query\": {\"params\": [\"A\"]},
+                  \"reducer\": {\"params\": [], \"type\": \"last\"},
                   \"type\": \"query\"
                 }],
                 \"refId\": \"B\",
