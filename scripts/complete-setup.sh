@@ -55,9 +55,24 @@ fi
 
 echo "✅ Core infrastructure deployed successfully!"
 
-# Step 1.5: Create sample document in S3 for testing
+# Step 1.5: Force Grafana service restart to pick up IAM role
 echo ""
-echo "📄 Step 1.5: Creating sample document for testing..."
+echo "🔄 Step 1.5: Restarting Grafana service to apply IAM role..."
+CLUSTER_ARN=$(aws ecs list-clusters --region $REGION --query 'clusterArns[0]' --output text)
+GRAFANA_SERVICE=$(aws ecs list-services --cluster $CLUSTER_ARN --region $REGION --query 'serviceArns[?contains(@, `Grafana`)]' --output text)
+
+if [ -n "$GRAFANA_SERVICE" ]; then
+  aws ecs update-service --cluster $CLUSTER_ARN --service $GRAFANA_SERVICE --force-new-deployment --region $REGION > /dev/null
+  echo "✅ Grafana service restart initiated"
+  echo "⏳ Waiting for new task to start..."
+  sleep 30
+else
+  echo "⚠️  Could not find Grafana service"
+fi
+
+# Step 1.6: Create sample document in S3 for testing
+echo ""
+echo "📄 Step 1.6: Creating sample document for testing..."
 BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name GrafanaObservabilityStackStack --region $REGION --query 'Stacks[0].Outputs[?OutputKey==`S3BucketName`].OutputValue' --output text 2>/dev/null)
 
 if [ -n "$BUCKET_NAME" ] && [ "$BUCKET_NAME" != "None" ]; then
