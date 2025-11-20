@@ -9,6 +9,6 @@ datasources:
     jsonData:
       httpMethod: POST
       sigV4Auth: true
-      sigV4AuthType: ec2_iam_role
+      sigV4AuthType: default
       sigV4Region: ${AWS_REGION}
     editable: false
