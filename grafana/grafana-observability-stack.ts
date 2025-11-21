@@ -470,13 +470,6 @@ EOF
       image: ecs.ContainerImage.fromAsset('./grafana'),
       memoryLimitMiB: 1024,
       portMappings: [{ containerPort: 3000, protocol: ecs.Protocol.TCP }],
-      logging: ecs.LogDrivers.awsLogs({
-        streamPrefix: 'grafana',
-        logGroup: new logs.LogGroup(this, 'GrafanaLogGroup', {
-          logGroupName: '/ecs/grafana',
-          removalPolicy: cdk.RemovalPolicy.DESTROY,
-        }),
-      }),
       environment: {
         GF_SECURITY_ADMIN_USER: 'admin',
         GF_SECURITY_ADMIN_PASSWORD: 'admin',
