@@ -17,13 +17,13 @@ However, the ECS task role isn't being attached to the running container, preven
 
 ## Observations
 
-Task definition revision 49 specifies both roles:
+Task definition specifies both roles:
 ```
-taskRoleArn: arn:aws:iam::206524433062:role/GrafanaObservabilityStack-GrafanaTaskTaskRole195A15-Uz06JZouZYYs
-executionRoleArn: arn:aws:iam::206524433062:role/GrafanaObservabilityStack-GrafanaTaskExecutionRole0-rRhcrE5s0NDD
+taskRoleArn: arn:aws:iam::<account>:role/GrafanaObservabilityStack-GrafanaTaskTaskRole...
+executionRoleArn: arn:aws:iam::<account>:role/GrafanaObservabilityStack-GrafanaTaskExecutionRole...
 ```
 
-Running task `43ae5beb75194f25b607f22f2d51f432` on cluster `GrafanaObservabilityCluster40F7049E-tGFh0wYEQGb6`:
+Running task on cluster:
 ```
 taskRoleArn: <field not present>
 executionRoleArn: <field not present>
@@ -52,12 +52,7 @@ const grafanaTaskDefinition = new ecs.FargateTaskDefinition(this, 'GrafanaTask',
 
 Reverted to original implicit role creation as explicit role creation didn't resolve the platform bug.
 
-Redeployed as revision 50 to new cluster `GrafanaObservabilityStackStack-ObservabilityCluster40F7049E-T3ELdZCnQ9Wb`. Running task `04ab5455f5034027925614f486b4fc28` still missing both role fields.
-
-Container logs from 2025-11-20 22:01 UTC:
-```
-status=403 body="{\"message\":\"Missing Authentication Token\"}"
-```
+Redeployed to new cluster. Running task still missing both role fields.
 
 Verified via ECS MCP `DescribeTasks` and AWS CLI. Both confirm role fields absent from running task API response.
 
